@@ -49,3 +49,16 @@ CREATE TABLE IF NOT EXISTS utility_bills (
 );
 -- statement-breakpoint
 CREATE INDEX IF NOT EXISTS utility_bills_range_idx ON utility_bills (bill_start, bill_end);
+-- statement-breakpoint
+CREATE TABLE IF NOT EXISTS utility_payments (
+  id uuid PRIMARY KEY,
+  utility_bill_id uuid NOT NULL REFERENCES utility_bills(id) ON DELETE CASCADE,
+  member_id uuid NOT NULL REFERENCES members(id) ON DELETE RESTRICT,
+  month char(7) NOT NULL CHECK (month ~ '^[0-9]{4}-[0-9]{2}$'),
+  amount numeric(10,2) NOT NULL CHECK (amount >= 0),
+  paid_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (utility_bill_id, member_id, month)
+);
+-- statement-breakpoint
+CREATE INDEX IF NOT EXISTS utility_payments_month_idx ON utility_payments (month, utility_bill_id);

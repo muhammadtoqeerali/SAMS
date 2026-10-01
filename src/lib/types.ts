@@ -35,6 +35,26 @@ export type UtilityBill = {
   createdAt: string;
 };
 
+export type UtilityPayment = {
+  id: string;
+  utilityBillId: string;
+  memberId: string;
+  memberName: string;
+  month: string;
+  amount: number;
+  paidAt: string;
+};
+
+export type UtilityShareStatus = {
+  memberId: string;
+  memberName: string;
+  share: number;
+  paidAmount: number;
+  dueAmount: number;
+  isPaid: boolean;
+  paidAt: string | null;
+};
+
 export type Settings = {
   householdName: string;
   rentPerPerson: number;
@@ -47,6 +67,8 @@ export type MemberBalance = {
   rent: number;
   groceries: number;
   utilities: number;
+  utilityPaid: number;
+  utilityDue: number;
   unpaidUtilities: number;
   paidForHouse: number;
   internalShare: number;
@@ -67,11 +89,19 @@ export type MonthSnapshot = {
   settings: Settings;
   participants: Member[];
   expenses: Expense[];
-  bills: (UtilityBill & { allocatedAmount: number })[];
+  bills: (UtilityBill & {
+    allocatedAmount: number;
+    shares: UtilityShareStatus[];
+    residentPaidTotal: number;
+    residentDueTotal: number;
+    clearedResidents: number;
+  })[];
   groceryTotal: number;
   electricityTotal: number;
   waterTotal: number;
   utilityTotal: number;
+  utilityResidentPaidTotal: number;
+  utilityResidentDueTotal: number;
   unpaidUtilityTotal: number;
   rentTotal: number;
   sharedTotal: number;

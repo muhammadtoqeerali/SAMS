@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Building2, CreditCard, ReceiptText, Users, WalletCards, Zap } from "lucide-react";
+import { ArrowRight, Building2, CheckCircle2, CreditCard, ReceiptText, Users, WalletCards, Zap } from "lucide-react";
 import { TrendChart, ContributionChart } from "@/components/AnalyticsCharts";
 import { EmptyState } from "@/components/EmptyState";
 import { MonthPicker } from "@/components/MonthPicker";
@@ -57,11 +57,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           {snapshot.balances.length ? (
             <div className="table-scroll">
               <table>
-                <thead><tr><th>Resident</th><th>Rent</th><th>Groceries</th><th>Utilities</th><th>Paid for house</th><th>Shared balance</th><th>Total obligation</th></tr></thead>
+                <thead><tr><th>Resident</th><th>Rent</th><th>Groceries</th><th>Utilities</th><th>Utility status</th><th>Paid for house</th><th>Shared balance</th><th>Total obligation</th></tr></thead>
                 <tbody>{snapshot.balances.map((row) => (
                   <tr key={row.id}>
                     <td><strong>{row.name}</strong></td>
-                    <td>{euro(row.rent)}</td><td>{euro(row.groceries)}</td><td>{euro(row.utilities)}</td><td>{euro(row.paidForHouse)}</td>
+                    <td>{euro(row.rent)}</td><td>{euro(row.groceries)}</td><td>{euro(row.utilities)}</td>
+                    <td><span className={`balance-pill ${row.utilityDue > 0.009 ? "negative" : "positive"}`}>{row.utilityDue > 0.009 ? `due ${euro(row.utilityDue)}` : "clear"}</span></td>
+                    <td>{euro(row.paidForHouse)}</td>
                     <td><span className={`balance-pill ${row.netBalance > 0.009 ? "positive" : row.netBalance < -0.009 ? "negative" : "neutral"}`}>{row.netBalance > 0.009 ? `gets ${euro(row.netBalance)}` : row.netBalance < -0.009 ? `owes ${euro(-row.netBalance)}` : "settled"}</span></td>
                     <td><strong>{euro(row.totalObligation)}</strong></td>
                   </tr>
@@ -80,7 +82,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </div>
             ))}</div>
           ) : <EmptyState title="No roommate transfers needed" text="Already-paid shared costs are balanced for this month." />}
-          {snapshot.unpaidUtilityTotal > 0 && <div className="utility-due"><Zap size={17} /><div><strong>{euro(snapshot.unpaidUtilityTotal)} utilities still external</strong><span>{euro(snapshot.unpaidUtilityTotal / Math.max(snapshot.participants.length, 1))} per resident if split equally.</span></div></div>}
+          <div className={`utility-due ${snapshot.utilityResidentDueTotal <= 0.009 ? "clear" : ""}`}>
+            {snapshot.utilityResidentDueTotal <= 0.009 ? <CheckCircle2 size={17} /> : <Zap size={17} />}
+            <div>
+              <strong>{snapshot.utilityResidentDueTotal <= 0.009 ? "All utility shares are clear" : `${euro(snapshot.utilityResidentDueTotal)} resident utility shares still due`}</strong>
+              <span>{snapshot.utilityResidentDueTotal <= 0.009 ? "Paid records stay saved in this month's utility ledger." : "Open Utilities to confirm each resident when they pay."}</span>
+            </div>
+          </div>
+          {snapshot.unpaidUtilityTotal > 0 && <div className="utility-unassigned"><span>{euro(snapshot.unpaidUtilityTotal)} of utility bills have no bill holder assigned.</span></div>}
         </article>
       </section>
 

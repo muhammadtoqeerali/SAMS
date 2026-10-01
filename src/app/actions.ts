@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSession, destroySession, isAuthenticated, passwordMatches } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { getMonthSnapshot } from "@/lib/data";
 
 export type ActionState = { ok: boolean; message: string };
 
@@ -164,6 +165,47 @@ export async function deleteUtilityAction(formData: FormData) {
   const id = z.string().uuid().parse(formData.get("id"));
   const sql = getDb();
   await sql`DELETE FROM utility_bills WHERE id = ${id}::uuid`;
+  revalidateAll();
+}
+
+export async function setUtilitySharePaymentAction(formData: FormData) {
+  await authorized();
+  const values = z.object({
+    billId: z.string().uuid(),
+    memberId: z.string().uuid(),
+    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+    mode: z.enum(["paid", "unpaid"]),
+  }).parse({
+    billId: formData.get("billId"),
+    memberId: formData.get("memberId"),
+    month: formData.get("month"),
+    mode: formData.get("mode"),
+  });
+
+  const sql = getDb();
+  if (values.mode === "unpaid") {
+    await sql`
+      DELETE FROM utility_payments
+      WHERE utility_bill_id = ${values.billId}::uuid
+        AND member_id = ${values.memberId}::uuid
+        AND month = ${values.month}
+    `;
+    revalidateAll();
+    return;
+  }
+
+  const snapshot = await getMonthSnapshot(values.month);
+  const bill = snapshot.bills.find((item) => item.id === values.billId);
+  const share = bill?.shares.find((item) => item.memberId === values.memberId);
+  if (!bill || !share) throw new Error("This utility share is not part of the selected month.");
+
+  await sql`
+    INSERT INTO utility_payments (id, utility_bill_id, member_id, month, amount, paid_at)
+    VALUES (${randomUUID()}::uuid, ${values.billId}::uuid, ${values.memberId}::uuid,
+            ${values.month}, ${share.share}, now())
+    ON CONFLICT (utility_bill_id, member_id, month)
+    DO UPDATE SET amount = EXCLUDED.amount, paid_at = now()
+  `;
   revalidateAll();
 }
 

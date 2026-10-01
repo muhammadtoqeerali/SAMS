@@ -12,6 +12,8 @@ import type {
   Settlement,
   TrendPoint,
   UtilityBill,
+  UtilityPayment,
+  UtilityShareStatus,
 } from "@/lib/types";
 
 type Row = Record<string, unknown>;
@@ -57,6 +59,18 @@ function utilityFromRow(row: Row): UtilityBill {
     payerName: nullableText(row.payer_name),
     notes: nullableText(row.notes),
     createdAt: text(row.created_at),
+  };
+}
+
+function utilityPaymentFromRow(row: Row): UtilityPayment {
+  return {
+    id: text(row.id),
+    utilityBillId: text(row.utility_bill_id),
+    memberId: text(row.member_id),
+    memberName: text(row.member_name),
+    month: text(row.month),
+    amount: num(row.amount),
+    paidAt: text(row.paid_at),
   };
 }
 
@@ -138,11 +152,37 @@ export async function getBillsOverlappingMonth(month: string): Promise<UtilityBi
   return rows.map(utilityFromRow);
 }
 
+export async function getUtilityPaymentsForMonth(month: string): Promise<UtilityPayment[]> {
+  const sql = getDb();
+  const rows = (await sql`
+    SELECT p.id, p.utility_bill_id, p.member_id, m.name AS member_name,
+           p.month, p.amount, p.paid_at
+    FROM utility_payments p
+    JOIN members m ON m.id = p.member_id
+    WHERE p.month = ${month}
+    ORDER BY p.paid_at DESC
+  `) as Row[];
+  return rows.map(utilityPaymentFromRow);
+}
+
 function allocatedBillAmount(bill: UtilityBill, month: string) {
   const { start, end } = monthBounds(month);
   const overlap = overlapDays(bill.billStart, bill.billEnd, start, end);
   const totalDays = daysInclusive(bill.billStart, bill.billEnd);
   return round((bill.amount * overlap) / totalDays);
+}
+
+function splitAmountExactly(amount: number, members: Member[]) {
+  const result = new Map<string, number>();
+  if (!members.length) return result;
+
+  const cents = Math.round(amount * 100);
+  const base = Math.floor(cents / members.length);
+  const remainder = cents - base * members.length;
+  members.forEach((member, index) => {
+    result.set(member.id, (base + (index < remainder ? 1 : 0)) / 100);
+  });
+  return result;
 }
 
 function buildSettlements(balances: MemberBalance[]): Settlement[] {
@@ -178,14 +218,44 @@ function buildSettlements(balances: MemberBalance[]): Settlement[] {
 }
 
 export async function getMonthSnapshot(month: string): Promise<MonthSnapshot> {
-  const [settings, participants, expenses, rawBills] = await Promise.all([
+  const [settings, participants, expenses, rawBills, utilityPayments] = await Promise.all([
     getSettings(),
     getParticipants(month),
     getExpensesForMonth(month),
     getBillsOverlappingMonth(month),
+    getUtilityPaymentsForMonth(month),
   ]);
 
-  const bills = rawBills.map((bill) => ({ ...bill, allocatedAmount: allocatedBillAmount(bill, month) }));
+  const paymentMap = new Map(
+    utilityPayments.map((payment) => [`${payment.utilityBillId}:${payment.memberId}`, payment]),
+  );
+
+  const bills = rawBills.map((bill) => {
+    const allocatedAmount = allocatedBillAmount(bill, month);
+    const split = splitAmountExactly(allocatedAmount, participants);
+    const shares: UtilityShareStatus[] = participants.map((member) => {
+      const share = split.get(member.id) ?? 0;
+      const payment = paymentMap.get(`${bill.id}:${member.id}`);
+      return {
+        memberId: member.id,
+        memberName: member.name,
+        share,
+        paidAmount: payment ? share : 0,
+        dueAmount: payment ? 0 : share,
+        isPaid: Boolean(payment),
+        paidAt: payment?.paidAt ?? null,
+      };
+    });
+    return {
+      ...bill,
+      allocatedAmount,
+      shares,
+      residentPaidTotal: round(shares.reduce((sum, item) => sum + item.paidAmount, 0)),
+      residentDueTotal: round(shares.reduce((sum, item) => sum + item.dueAmount, 0)),
+      clearedResidents: shares.filter((item) => item.isPaid).length,
+    };
+  });
+
   const people = participants.length;
   const groceryTotal = round(expenses.reduce((sum, item) => sum + item.amount, 0));
   const electricityTotal = round(
@@ -195,18 +265,22 @@ export async function getMonthSnapshot(month: string): Promise<MonthSnapshot> {
     bills.filter((bill) => bill.type === "WATER").reduce((sum, bill) => sum + bill.allocatedAmount, 0),
   );
   const utilityTotal = round(electricityTotal + waterTotal);
+  const utilityResidentPaidTotal = round(bills.reduce((sum, bill) => sum + bill.residentPaidTotal, 0));
+  const utilityResidentDueTotal = round(bills.reduce((sum, bill) => sum + bill.residentDueTotal, 0));
+
+  // Bills without a named holder/collector remain outside roommate-to-roommate settlement.
   const unpaidUtilityTotal = round(
     bills.filter((bill) => !bill.paidBy).reduce((sum, bill) => sum + bill.allocatedAmount, 0),
   );
-  const paidUtilityTotal = round(utilityTotal - unpaidUtilityTotal);
+  const assignedUtilityTotal = round(utilityTotal - unpaidUtilityTotal);
   const rentTotal = round(settings.rentPerPerson * people);
   const sharedTotal = round(groceryTotal + utilityTotal);
   const householdTotal = round(rentTotal + sharedTotal);
 
   const groceryShare = people ? groceryTotal / people : 0;
   const utilityShare = people ? utilityTotal / people : 0;
-  const paidUtilityShare = people ? paidUtilityTotal / people : 0;
-  const unpaidUtilityShare = people ? unpaidUtilityTotal / people : 0;
+  const assignedUtilityShare = people ? assignedUtilityTotal / people : 0;
+  const unassignedUtilityShare = people ? unpaidUtilityTotal / people : 0;
 
   const balances: MemberBalance[] = participants.map((member) => {
     const expenseContribution = expenses
@@ -216,20 +290,41 @@ export async function getMonthSnapshot(month: string): Promise<MonthSnapshot> {
       .filter((bill) => bill.paidBy === member.id)
       .reduce((sum, bill) => sum + bill.allocatedAmount, 0);
     const paidForHouse = round(expenseContribution + utilityContribution);
-    const internalShare = round(groceryShare + paidUtilityShare);
+    const internalShare = round(groceryShare + assignedUtilityShare);
+    const utilityStatuses = bills.map((bill) => bill.shares.find((share) => share.memberId === member.id)).filter(Boolean) as UtilityShareStatus[];
+    const utilityPaid = round(utilityStatuses.reduce((sum, status) => sum + status.paidAmount, 0));
+    const utilityDue = round(utilityStatuses.reduce((sum, status) => sum + status.dueAmount, 0));
     return {
       id: member.id,
       name: member.name,
       rent: round(settings.rentPerPerson),
       groceries: round(groceryShare),
       utilities: round(utilityShare),
-      unpaidUtilities: round(unpaidUtilityShare),
+      utilityPaid,
+      utilityDue,
+      unpaidUtilities: round(unassignedUtilityShare),
       paidForHouse,
       internalShare,
       netBalance: round(paidForHouse - internalShare),
       totalObligation: round(settings.rentPerPerson + groceryShare + utilityShare),
     };
   });
+
+  // A confirmed utility share payment is an internal transfer to the bill holder.
+  // Apply it to roommate balances so already-cleared shares are not requested again.
+  const balanceMap = new Map(balances.map((balance) => [balance.id, balance]));
+  for (const bill of bills) {
+    if (!bill.paidBy) continue;
+    const holder = balanceMap.get(bill.paidBy);
+    if (!holder) continue;
+    for (const share of bill.shares) {
+      if (!share.isPaid || share.memberId === bill.paidBy) continue;
+      const member = balanceMap.get(share.memberId);
+      if (!member) continue;
+      member.netBalance = round(member.netBalance + share.share);
+      holder.netBalance = round(holder.netBalance - share.share);
+    }
+  }
 
   return {
     month,
@@ -241,6 +336,8 @@ export async function getMonthSnapshot(month: string): Promise<MonthSnapshot> {
     electricityTotal,
     waterTotal,
     utilityTotal,
+    utilityResidentPaidTotal,
+    utilityResidentDueTotal,
     unpaidUtilityTotal,
     rentTotal,
     sharedTotal,
