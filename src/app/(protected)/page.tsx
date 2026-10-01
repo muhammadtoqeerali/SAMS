@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, Building2, CheckCircle2, CreditCard, ReceiptText, Users, WalletCards, Zap } from "lucide-react";
+import { ArrowRight, Building2, Check, CheckCircle2, CreditCard, ReceiptText, RotateCcw, Users, WalletCards, Zap } from "lucide-react";
+import { setRentPaymentAction } from "@/app/actions";
 import { TrendChart, ContributionChart } from "@/components/AnalyticsCharts";
 import { EmptyState } from "@/components/EmptyState";
 import { MonthPicker } from "@/components/MonthPicker";
@@ -32,9 +33,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <section className="stats-grid">
         <StatCard label="Household total" value={euro(snapshot.householdTotal)} detail="Rent + shared costs" icon={WalletCards} tone="blue" />
-        <StatCard label="Rent" value={euro(snapshot.rentTotal)} detail={`${euro(snapshot.settings.rentPerPerson)} per resident`} icon={Building2} />
+        <StatCard label="Rent" value={euro(snapshot.rentTotal)} detail={`${euro(snapshot.rentResidentPaidTotal)} paid · ${euro(snapshot.rentResidentDueTotal)} due`} icon={Building2} />
         <StatCard label="Groceries & house" value={euro(snapshot.groceryTotal)} detail={`${snapshot.expenses.length} recorded purchase${snapshot.expenses.length === 1 ? "" : "s"}`} icon={ReceiptText} tone="green" />
-        <StatCard label="Utilities" value={euro(snapshot.utilityTotal)} detail={`${euro(snapshot.electricityTotal)} electric · ${euro(snapshot.waterTotal)} water`} icon={Zap} tone="amber" />
+        <StatCard label="Utilities" value={euro(snapshot.utilityTotal)} detail={`${euro(snapshot.utilityResidentPaidTotal)} cleared · ${euro(snapshot.utilityResidentDueTotal)} due`} icon={Zap} tone="amber" />
       </section>
 
       <section className="dashboard-grid charts-grid">
@@ -52,19 +53,34 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <article className="card span-2">
           <div className="card-head">
             <div><span className="eyebrow">Resident breakdown</span><h2>Monthly responsibility</h2></div>
-            <span className="small-note">Rent is external; net balance is roommate-only.</span>
+            <span className="small-note">Confirm rent here; confirm electricity/water on Utilities.</span>
           </div>
           {snapshot.balances.length ? (
             <div className="table-scroll">
               <table>
-                <thead><tr><th>Resident</th><th>Rent</th><th>Groceries</th><th>Utilities</th><th>Utility status</th><th>Paid for house</th><th>Shared balance</th><th>Total obligation</th></tr></thead>
+                <thead><tr><th>Resident</th><th>Rent</th><th>Rent status</th><th>Groceries</th><th>Utilities</th><th>Utility status</th><th>Shared balance</th><th>Still due</th><th>Total responsibility</th></tr></thead>
                 <tbody>{snapshot.balances.map((row) => (
                   <tr key={row.id}>
-                    <td><strong>{row.name}</strong></td>
-                    <td>{euro(row.rent)}</td><td>{euro(row.groceries)}</td><td>{euro(row.utilities)}</td>
+                    <td><Link className="resident-link" href={`/members/${row.id}`}><strong>{row.name}</strong></Link></td>
+                    <td>{euro(row.rent)}</td>
+                    <td>
+                      <div className="payment-status-stack">
+                        <span className={`balance-pill ${row.rentDue > 0.009 ? "negative" : "positive"}`}>{row.rentDue > 0.009 ? `due ${euro(row.rentDue)}` : "clear"}</span>
+                        <form action={setRentPaymentAction}>
+                          <input type="hidden" name="memberId" value={row.id} />
+                          <input type="hidden" name="month" value={month} />
+                          <input type="hidden" name="mode" value={row.rentDue > 0.009 ? "paid" : "unpaid"} />
+                          <button className={`mini-payment-button ${row.rentDue > 0.009 ? "confirm" : "undo"}`} type="submit">
+                            {row.rentDue > 0.009 ? <><Check size={12} /> Mark paid</> : <><RotateCcw size={12} /> Undo</>}
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                    <td>{euro(row.groceries)}</td>
+                    <td>{euro(row.utilities)}</td>
                     <td><span className={`balance-pill ${row.utilityDue > 0.009 ? "negative" : "positive"}`}>{row.utilityDue > 0.009 ? `due ${euro(row.utilityDue)}` : "clear"}</span></td>
-                    <td>{euro(row.paidForHouse)}</td>
                     <td><span className={`balance-pill ${row.netBalance > 0.009 ? "positive" : row.netBalance < -0.009 ? "negative" : "neutral"}`}>{row.netBalance > 0.009 ? `gets ${euro(row.netBalance)}` : row.netBalance < -0.009 ? `owes ${euro(-row.netBalance)}` : "settled"}</span></td>
+                    <td><strong className={row.totalDue > 0.009 ? "due-text" : "clear-text"}>{row.totalDue > 0.009 ? euro(row.totalDue) : "€0 clear"}</strong></td>
                     <td><strong>{euro(row.totalObligation)}</strong></td>
                   </tr>
                 ))}</tbody>
@@ -89,6 +105,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <span>{snapshot.utilityResidentDueTotal <= 0.009 ? "Paid records stay saved in this month's utility ledger." : "Open Utilities to confirm each resident when they pay."}</span>
             </div>
           </div>
+          {snapshot.rentResidentDueTotal > 0.009 && <div className="utility-unassigned"><span>{euro(snapshot.rentResidentDueTotal)} rent still due this month.</span></div>}
           {snapshot.unpaidUtilityTotal > 0 && <div className="utility-unassigned"><span>{euro(snapshot.unpaidUtilityTotal)} of utility bills have no bill holder assigned.</span></div>}
         </article>
       </section>

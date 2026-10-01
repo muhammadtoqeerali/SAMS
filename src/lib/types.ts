@@ -55,6 +55,15 @@ export type UtilityShareStatus = {
   paidAt: string | null;
 };
 
+export type RentPayment = {
+  id: string;
+  memberId: string;
+  memberName: string;
+  month: string;
+  amount: number;
+  paidAt: string;
+};
+
 export type Settings = {
   householdName: string;
   rentPerPerson: number;
@@ -65,15 +74,21 @@ export type MemberBalance = {
   id: string;
   name: string;
   rent: number;
+  rentPaid: number;
+  rentDue: number;
+  rentPaidAt: string | null;
   groceries: number;
   utilities: number;
   utilityPaid: number;
   utilityDue: number;
+  externalUtilityDue: number;
   unpaidUtilities: number;
   paidForHouse: number;
+  outOfPocketPaid: number;
   internalShare: number;
   netBalance: number;
   totalObligation: number;
+  totalDue: number;
 };
 
 export type Settlement = {
@@ -104,10 +119,59 @@ export type MonthSnapshot = {
   utilityResidentDueTotal: number;
   unpaidUtilityTotal: number;
   rentTotal: number;
+  rentResidentPaidTotal: number;
+  rentResidentDueTotal: number;
   sharedTotal: number;
   householdTotal: number;
   balances: MemberBalance[];
   settlements: Settlement[];
+};
+
+export type MemberLifetimeSummary = {
+  member: Member;
+  monthsResident: number;
+  firstMonth: string;
+  lastMonth: string;
+  totalResponsibility: number;
+  recordedCashPaid: number;
+  rentCharged: number;
+  rentPaid: number;
+  rentDue: number;
+  groceriesCharged: number;
+  utilitiesCharged: number;
+  utilitiesPaid: number;
+  utilityDue: number;
+  externalUtilityDue: number;
+  housePurchasesPaid: number;
+  utilityBillsCovered: number;
+  roommateBalance: number;
+  roommateDue: number;
+  roommateCredit: number;
+  totalDue: number;
+};
+
+export type MemberMonthLedger = {
+  month: string;
+  rent: number;
+  rentPaid: number;
+  rentDue: number;
+  rentPaidAt: string | null;
+  groceries: number;
+  utilities: number;
+  utilityPaid: number;
+  utilityDue: number;
+  externalUtilityDue: number;
+  housePurchasesPaid: number;
+  paidForHouse: number;
+  outOfPocketPaid: number;
+  roommateBalance: number;
+  totalObligation: number;
+  totalDue: number;
+};
+
+export type MemberLedger = {
+  summary: MemberLifetimeSummary;
+  months: MemberMonthLedger[];
 };
 
 export type TrendPoint = {

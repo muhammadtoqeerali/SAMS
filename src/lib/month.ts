@@ -29,6 +29,20 @@ export function monthsBack(fromMonth: string, count: number) {
   });
 }
 
+export function monthsBetween(fromMonth: string, throughMonth: string) {
+  const [fromYear, fromMon] = fromMonth.split("-").map(Number);
+  const [throughYear, throughMon] = throughMonth.split("-").map(Number);
+  const start = fromYear * 12 + (fromMon - 1);
+  const end = throughYear * 12 + (throughMon - 1);
+  if (end < start) return [];
+  return Array.from({ length: end - start + 1 }, (_, index) => {
+    const absolute = start + index;
+    const year = Math.floor(absolute / 12);
+    const month = (absolute % 12) + 1;
+    return `${year}-${String(month).padStart(2, "0")}`;
+  });
+}
+
 export function daysInclusive(start: string, end: string) {
   const a = new Date(`${start}T00:00:00Z`).getTime();
   const b = new Date(`${end}T00:00:00Z`).getTime();

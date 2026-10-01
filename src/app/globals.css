@@ -339,3 +339,93 @@ td:first-child, td:last-child { color: var(--text); }
 @media (max-width: 430px) {
   .utility-stats { grid-template-columns: 1fr; }
 }
+
+/* Rent status + resident lifetime ledger */
+.payment-status-stack { min-width: 112px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.mini-payment-button { min-height: 27px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: 0; border-radius: 8px; font-size: 8px; font-weight: 800; white-space: nowrap; }
+.mini-payment-button.confirm { color: #137a54; background: var(--soft-green); }
+.mini-payment-button.confirm:hover { background: #dff4ea; }
+.mini-payment-button.undo { color: #747c8d; background: #f0f2f6; }
+.mini-payment-button.undo:hover { color: #b44747; background: var(--soft-red); }
+.resident-link { color: var(--text); }
+.resident-link:hover { color: var(--accent); }
+.due-text { color: #c84848; }
+.clear-text { color: var(--green); }
+.payment-time { max-width: 105px; color: var(--muted); font-size: 8px; line-height: 1.35; white-space: normal; }
+
+.member-overview-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.member-overview-stat { padding: 14px 16px; display: flex; align-items: center; gap: 11px; border: 1px solid var(--line); border-radius: 15px; background: #fff; }
+.member-overview-stat > svg { width: 34px; height: 34px; padding: 8px; border-radius: 10px; color: var(--accent); background: var(--soft-accent); }
+.member-overview-stat > div { display: flex; flex-direction: column; gap: 2px; }
+.member-overview-stat span { color: var(--muted); font-size: 10px; }
+.member-overview-stat strong { font-size: 16px; }
+.member-overview-stat.due > svg { color: var(--red); background: var(--soft-red); }
+.member-overview-stat.clear > svg { color: var(--green); background: var(--soft-green); }
+.profile-grid-ledger { grid-template-columns: 1fr; }
+.ledger-profile-card { background: #fff; }
+.member-ledger-numbers { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.member-ledger-numbers > div { padding: 10px; display: flex; flex-direction: column; gap: 3px; border-radius: 11px; background: var(--panel-2); }
+.member-ledger-numbers span { color: var(--muted); font-size: 8px; }
+.member-ledger-numbers strong { font-size: 11px; }
+.member-ledger-numbers .is-due { background: var(--soft-red); }
+.member-ledger-numbers .is-due strong { color: #c84848; }
+.member-ledger-numbers .is-clear { background: var(--soft-green); }
+.member-ledger-numbers .is-clear strong { color: var(--green); }
+.profile-ledger-actions { margin-top: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.profile-ledger-actions form { display: inline-flex; }
+
+.member-ledger-header { align-items: center; }
+.back-link { margin-bottom: 12px; display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 10px; font-weight: 800; }
+.back-link:hover { color: var(--accent); }
+.ledger-status-badge { padding: 10px 13px; border-radius: 999px; font-size: 11px; font-weight: 900; white-space: nowrap; }
+.ledger-status-badge.due { color: #bf4747; background: var(--soft-red); }
+.ledger-status-badge.clear { color: #137a54; background: var(--soft-green); }
+.member-lifetime-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.lifetime-card { min-width: 0; padding: 17px; display: flex; flex-direction: column; gap: 5px; border: 1px solid var(--line); border-radius: 17px; background: #fff; box-shadow: 0 8px 24px rgba(31,42,68,.04); }
+.lifetime-card > svg { margin-bottom: 7px; color: var(--accent); }
+.lifetime-card > span { color: var(--muted); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+.lifetime-card > strong { font-size: 20px; letter-spacing: -.03em; }
+.lifetime-card > small { color: var(--muted); font-size: 9px; line-height: 1.45; }
+.lifetime-card.due { border-color: #f2cece; }
+.lifetime-card.due > svg, .lifetime-card.due > strong { color: var(--red); }
+.lifetime-card.clear { border-color: #ccebdd; }
+.lifetime-card.clear > svg, .lifetime-card.clear > strong { color: var(--green); }
+.member-breakdown-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ledger-breakdown-list { display: flex; flex-direction: column; }
+.ledger-breakdown-list > div { padding: 11px 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid #f0f2f6; }
+.ledger-breakdown-list > div:last-child { border-bottom: 0; }
+.ledger-breakdown-list span { color: var(--muted); font-size: 10px; }
+.ledger-breakdown-list strong { font-size: 12px; }
+.ledger-breakdown-list .total { margin-top: 6px; padding: 12px; border: 0; border-radius: 11px; background: var(--panel-2); }
+.ledger-breakdown-list .total strong { color: var(--accent); font-size: 14px; }
+.ledger-breakdown-list .total.due { background: var(--soft-red); }
+.ledger-breakdown-list .total.due strong { color: var(--red); }
+.ledger-breakdown-list .total.clear { background: var(--soft-green); }
+.ledger-breakdown-list .total.clear strong { color: var(--green); }
+.member-ledger-table th, .member-ledger-table td { vertical-align: top; }
+.mini-ledger-link { color: var(--accent); font-size: 8px; font-weight: 800; }
+.mini-ledger-link:hover { text-decoration: underline; }
+.ledger-month-status { display: inline-flex; padding: 5px 8px; border-radius: 999px; font-size: 9px; font-weight: 900; }
+.ledger-month-status.due { color: #c84848; background: var(--soft-red); }
+.ledger-month-status.clear { color: var(--green); background: var(--soft-green); }
+
+@media (max-width: 1120px) {
+  .member-lifetime-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 850px) {
+  .member-overview-stats { grid-template-columns: 1fr; }
+  .member-breakdown-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 650px) {
+  .member-ledger-header { align-items: flex-start; }
+  .member-lifetime-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 430px) {
+  .member-lifetime-grid { grid-template-columns: 1fr; }
+  .member-ledger-numbers { grid-template-columns: 1fr; }
+  .profile-ledger-actions .button, .profile-ledger-actions form { width: 100%; }
+  .profile-ledger-actions form .button { width: 100%; }
+}

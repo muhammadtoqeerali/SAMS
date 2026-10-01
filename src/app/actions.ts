@@ -21,7 +21,7 @@ function revalidateAll() {
   revalidatePath("/");
   revalidatePath("/expenses");
   revalidatePath("/utilities");
-  revalidatePath("/members");
+  revalidatePath("/members", "layout");
   revalidatePath("/history");
   revalidatePath("/settings");
 }
@@ -204,6 +204,41 @@ export async function setUtilitySharePaymentAction(formData: FormData) {
     VALUES (${randomUUID()}::uuid, ${values.billId}::uuid, ${values.memberId}::uuid,
             ${values.month}, ${share.share}, now())
     ON CONFLICT (utility_bill_id, member_id, month)
+    DO UPDATE SET amount = EXCLUDED.amount, paid_at = now()
+  `;
+  revalidateAll();
+}
+
+export async function setRentPaymentAction(formData: FormData) {
+  await authorized();
+  const values = z.object({
+    memberId: z.string().uuid(),
+    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+    mode: z.enum(["paid", "unpaid"]),
+  }).parse({
+    memberId: formData.get("memberId"),
+    month: formData.get("month"),
+    mode: formData.get("mode"),
+  });
+
+  const sql = getDb();
+  if (values.mode === "unpaid") {
+    await sql`
+      DELETE FROM rent_payments
+      WHERE member_id = ${values.memberId}::uuid AND month = ${values.month}
+    `;
+    revalidateAll();
+    return;
+  }
+
+  const snapshot = await getMonthSnapshot(values.month);
+  const balance = snapshot.balances.find((item) => item.id === values.memberId);
+  if (!balance) throw new Error("This resident is not active in the selected month.");
+
+  await sql`
+    INSERT INTO rent_payments (id, member_id, month, amount, paid_at)
+    VALUES (${randomUUID()}::uuid, ${values.memberId}::uuid, ${values.month}, ${balance.rent}, now())
+    ON CONFLICT (member_id, month)
     DO UPDATE SET amount = EXCLUDED.amount, paid_at = now()
   `;
   revalidateAll();

@@ -62,3 +62,15 @@ CREATE TABLE IF NOT EXISTS utility_payments (
 );
 -- statement-breakpoint
 CREATE INDEX IF NOT EXISTS utility_payments_month_idx ON utility_payments (month, utility_bill_id);
+-- statement-breakpoint
+CREATE TABLE IF NOT EXISTS rent_payments (
+  id uuid PRIMARY KEY,
+  member_id uuid NOT NULL REFERENCES members(id) ON DELETE RESTRICT,
+  month char(7) NOT NULL CHECK (month ~ '^[0-9]{4}-[0-9]{2}$'),
+  amount numeric(10,2) NOT NULL CHECK (amount >= 0),
+  paid_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (member_id, month)
+);
+-- statement-breakpoint
+CREATE INDEX IF NOT EXISTS rent_payments_month_idx ON rent_payments (month, member_id);
