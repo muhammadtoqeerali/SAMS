@@ -429,3 +429,64 @@ td:first-child, td:last-child { color: var(--text); }
   .profile-ledger-actions .button, .profile-ledger-actions form { width: 100%; }
   .profile-ledger-actions form .button { width: 100%; }
 }
+
+/* 2026 ledger reliability + country identity polish */
+.utility-overview-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.utility-overview-card { min-width: 0; padding: 15px 16px; display: flex; align-items: center; gap: 11px; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 7px 20px rgba(31,42,68,.04); }
+.utility-overview-card > div:last-child { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.utility-overview-card span { color: var(--muted); font-size: 9px; font-weight: 700; }
+.utility-overview-card strong { font-size: 17px; letter-spacing: -.025em; }
+.utility-overview-card small { color: var(--muted); font-size: 8px; line-height: 1.35; }
+.utility-overview-icon { width: 36px; height: 36px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 11px; color: var(--accent); background: var(--soft-accent); font-size: 15px; font-weight: 900; }
+.utility-overview-icon.electric { color: var(--amber); background: var(--soft-amber); }
+.utility-overview-card.due .utility-overview-icon { color: var(--red); background: var(--soft-red); }
+.utility-overview-card.due strong { color: #c84848; }
+.utility-overview-card.clear .utility-overview-icon { color: var(--green); background: var(--soft-green); }
+.utility-overview-card.clear strong { color: var(--green); }
+.utility-form-note { margin-top: -1px; padding: 11px 12px; display: flex; flex-direction: column; gap: 3px; border: 1px solid #dfe3ff; border-radius: 11px; background: #f7f8ff; }
+.utility-form-note strong { color: #4d5fd8; font-size: 9px; }
+.utility-form-note span { color: #727da9; font-size: 9px; line-height: 1.5; }
+.utility-ledger-card { overflow: hidden; }
+.utility-bill-metrics { margin: 0 16px 12px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
+.utility-bill-metrics > div { min-width: 0; padding: 9px 10px; display: flex; flex-direction: column; gap: 3px; border-radius: 10px; background: var(--panel-2); }
+.utility-bill-metrics span { color: var(--muted); font-size: 8px; font-weight: 700; }
+.utility-bill-metrics strong { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.utility-bill-metrics .paid { background: var(--soft-green); }
+.utility-bill-metrics .paid strong { color: var(--green); }
+.utility-bill-metrics .due { background: var(--soft-red); }
+.utility-bill-metrics .due strong { color: var(--red); }
+.no-utility-residents { margin: 12px 16px 16px; padding: 11px 12px; display: flex; align-items: center; gap: 8px; border-radius: 11px; color: var(--muted); background: var(--panel-2); font-size: 9px; }
+.resident-name-with-flag { display: inline-flex; align-items: center; gap: 7px; }
+.mini-flag { width: 25px; height: 20px; flex: 0 0 auto; display: inline-grid; place-items: center; border: 1px solid rgba(23,32,51,.08); border-radius: 7px; background: #fff; box-shadow: 0 3px 8px rgba(31,42,68,.07); font-size: 15px; line-height: 1; }
+.profile-identity { display: flex; align-items: center; gap: 9px; }
+.country-badge { min-height: 32px; padding: 4px 8px 4px 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 10px; background: #fff; box-shadow: 0 4px 10px rgba(31,42,68,.04); }
+.country-badge > span { font-size: 18px; line-height: 1; }
+.country-badge small { color: var(--muted); font-size: 8px; font-weight: 800; }
+.country-badge.country-pk { border-color: #d0eadc; background: #f5fcf8; }
+.country-badge.country-bd { border-color: #d8eadd; background: #f7fcf8; }
+.country-badge.country-it { border-color: #e0e7e1; background: #fbfcfb; }
+.country-preview-note { display: flex; flex-wrap: wrap; gap: 6px; }
+.country-preview-note span { padding: 5px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2); color: var(--muted); font-size: 8px; font-weight: 700; }
+.member-overview-stats.four-up { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.member-ledger-numbers.expanded { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.member-ledger-numbers > div small { margin-top: 1px; color: var(--muted); font-size: 7px; line-height: 1.35; }
+.member-ledger-numbers > div.wide { grid-column: 1 / -1; }
+.member-ledger-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.member-ledger-title-row h1 { margin-right: 2px; }
+
+@media (max-width: 1180px) {
+  .utility-overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .utility-bill-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .member-overview-stats.four-up { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 650px) {
+  .utility-overview-grid { grid-template-columns: 1fr; }
+  .utility-bill-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .member-overview-stats.four-up { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 430px) {
+  .utility-bill-metrics { grid-template-columns: 1fr 1fr; }
+  .country-badge small { display: none; }
+}

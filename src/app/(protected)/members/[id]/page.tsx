@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Check, CircleDollarSign, ReceiptText, RotateCcw, WalletCards, Zap } from "lucide-react";
 import { notFound } from "next/navigation";
 import { setRentPaymentAction } from "@/app/actions";
+import { countryBadge } from "@/lib/country";
 import { euro, formatDate, formatDateTime, monthLabel } from "@/lib/format";
 import { getMemberLedger } from "@/lib/data";
 import { currentMonth } from "@/lib/month";
@@ -12,6 +13,7 @@ export default async function MemberLedgerPage({ params }: { params: Promise<{ i
   if (!ledger) notFound();
   const { summary, months } = ledger;
   const member = summary.member;
+  const country = countryBadge(member.nationality);
 
   return (
     <>
@@ -19,7 +21,7 @@ export default async function MemberLedgerPage({ params }: { params: Promise<{ i
         <div>
           <Link href="/members" className="back-link"><ArrowLeft size={15} /> Residents</Link>
           <span className="eyebrow">Lifetime resident ledger</span>
-          <h1>{member.name}</h1>
+          <div className="member-ledger-title-row"><h1>{member.name}</h1><span className={`country-badge country-${country.code.toLowerCase()}`}><span>{country.flag}</span><small>{country.label}</small></span></div>
           <p>Living here since {formatDate(member.joinedOn)}{member.leftOn ? ` · left ${formatDate(member.leftOn)}` : " · currently active"}</p>
         </div>
         <span className={`ledger-status-badge ${summary.totalDue > 0.009 ? "due" : "clear"}`}>{summary.totalDue > 0.009 ? `${euro(summary.totalDue)} still due` : "Clear · €0 due"}</span>
@@ -47,7 +49,7 @@ export default async function MemberLedgerPage({ params }: { params: Promise<{ i
           <div className="ledger-breakdown-list">
             <div><span>Rent paid</span><strong>{euro(summary.rentPaid)}</strong></div>
             <div><span>House purchases paid</span><strong>{euro(summary.housePurchasesPaid)}</strong></div>
-            <div><span>Utility bills covered as holder</span><strong>{euro(summary.utilityBillsCovered)}</strong></div>
+            <div><span>Utility bills managed / on their name</span><strong>{euro(summary.utilityBillsCovered)}</strong></div>
             <div><span>Roommate balance</span><strong>{summary.roommateCredit > 0.009 ? `gets ${euro(summary.roommateCredit)}` : summary.roommateDue > 0.009 ? `owes ${euro(summary.roommateDue)}` : "settled"}</strong></div>
             <div className={`total ${summary.totalDue > 0.009 ? "due" : "clear"}`}><span>Still due overall</span><strong>{euro(summary.totalDue)}</strong></div>
           </div>
@@ -71,6 +73,7 @@ export default async function MemberLedgerPage({ params }: { params: Promise<{ i
                       <input type="hidden" name="memberId" value={member.id} />
                       <input type="hidden" name="month" value={row.month} />
                       <input type="hidden" name="mode" value={row.rentDue > 0.009 ? "paid" : "unpaid"} />
+                      <input type="hidden" name="returnTo" value={`/members/${member.id}`} />
                       <button className={`mini-payment-button ${row.rentDue > 0.009 ? "confirm" : "undo"}`} type="submit">{row.rentDue > 0.009 ? <><Check size={12} /> Mark paid</> : <><RotateCcw size={12} /> Undo</>}</button>
                     </form>
                   </div>

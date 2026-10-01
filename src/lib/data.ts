@@ -26,6 +26,16 @@ type ExpenseWithMonth = Expense & { month: string };
 const num = (value: unknown) => Number(value ?? 0);
 const text = (value: unknown) => String(value ?? "");
 const nullableText = (value: unknown) => (value == null ? null : String(value));
+const dateOnly = (value: unknown) => {
+  if (value == null) return "";
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  const raw = String(value);
+  const iso = raw.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+  if (iso) return iso;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? raw.slice(0, 10) : parsed.toISOString().slice(0, 10);
+};
+const nullableDateOnly = (value: unknown) => (value == null ? null : dateOnly(value));
 const round = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
 function memberFromRow(row: Row): Member {
@@ -34,8 +44,8 @@ function memberFromRow(row: Row): Member {
     name: text(row.name),
     nationality: text(row.nationality),
     phone: text(row.phone),
-    joinedOn: text(row.joined_on),
-    leftOn: nullableText(row.left_on),
+    joinedOn: dateOnly(row.joined_on),
+    leftOn: nullableDateOnly(row.left_on),
     createdAt: text(row.created_at),
   };
 }
@@ -57,8 +67,8 @@ function utilityFromRow(row: Row): UtilityBill {
   return {
     id: text(row.id),
     type: text(row.type) as UtilityBill["type"],
-    billStart: text(row.bill_start),
-    billEnd: text(row.bill_end),
+    billStart: dateOnly(row.bill_start),
+    billEnd: dateOnly(row.bill_end),
     amount: num(row.amount),
     paidBy: nullableText(row.paid_by),
     payerName: nullableText(row.payer_name),
@@ -269,6 +279,7 @@ function buildMonthSnapshot(
       return {
         memberId: member.id,
         memberName: member.name,
+        nationality: member.nationality,
         share,
         paidAmount: round(paidAmount),
         dueAmount: round(Math.max(0, share - paidAmount)),
@@ -315,14 +326,13 @@ function buildMonthSnapshot(
     const rent = round(settings.rentPerPerson);
     const rentPaid = rentPayment ? round(Math.min(rent, rentPayment.amount || rent)) : 0;
     const rentDue = round(Math.max(0, rent - rentPaid));
-    const expenseContribution = expenses
-      .filter((expense) => expense.paidBy === member.id)
-      .reduce((sum, expense) => sum + expense.amount, 0);
-    const utilityContribution = bills
-      .filter((bill) => bill.paidBy === member.id)
-      .reduce((sum, bill) => sum + bill.allocatedAmount, 0);
-    const paidForHouse = round(expenseContribution + utilityContribution);
-    const internalShare = round(groceryShare + assignedUtilityShare);
+
+    const expenseContribution = round(
+      expenses
+        .filter((expense) => expense.paidBy === member.id)
+        .reduce((sum, expense) => sum + expense.amount, 0),
+    );
+
     const utilityStatuses = bills
       .map((bill) => bill.shares.find((share) => share.memberId === member.id))
       .filter(Boolean) as UtilityShareStatus[];
@@ -336,16 +346,18 @@ function buildMonthSnapshot(
           return sum + (share?.dueAmount ?? 0);
         }, 0),
     );
-    const utilitySharePaymentsOutsideOwnBills = round(
-      bills.reduce((sum, bill) => {
-        const share = bill.shares.find((item) => item.memberId === member.id);
-        if (!share || !share.isPaid || bill.paidBy === member.id) return sum;
-        return sum + share.paidAmount;
-      }, 0),
-    );
+
+    // Groceries/household purchases use the roommate settlement. Utilities have their own
+    // per-person ledger, so they are deliberately excluded here to avoid double-counting.
+    const paidForHouse = expenseContribution;
+    const internalShare = round(groceryShare);
+    const netBalance = round(paidForHouse - internalShare);
+    const roommateDue = round(Math.max(0, -netBalance));
+
     return {
       id: member.id,
       name: member.name,
+      nationality: member.nationality,
       rent,
       rentPaid,
       rentDue,
@@ -355,35 +367,15 @@ function buildMonthSnapshot(
       utilityPaid,
       utilityDue,
       externalUtilityDue,
-      unpaidUtilities: externalUtilityDue,
+      unpaidUtilities: utilityDue,
       paidForHouse,
-      outOfPocketPaid: round(rentPaid + expenseContribution + utilityContribution + utilitySharePaymentsOutsideOwnBills),
+      outOfPocketPaid: round(rentPaid + utilityPaid + expenseContribution),
       internalShare,
-      netBalance: round(paidForHouse - internalShare),
+      netBalance,
       totalObligation: round(rent + groceryShare + utilityShare),
-      totalDue: 0,
+      totalDue: round(rentDue + utilityDue + roommateDue),
     };
   });
-
-  // Confirmed utility-share payments are transfers to the named bill holder.
-  // Applying them here prevents an already-paid share from appearing again in roommate settlement.
-  const balanceMap = new Map(balances.map((balance) => [balance.id, balance]));
-  for (const bill of bills) {
-    if (!bill.paidBy) continue;
-    const holder = balanceMap.get(bill.paidBy);
-    if (!holder) continue;
-    for (const share of bill.shares) {
-      if (!share.isPaid || share.memberId === bill.paidBy) continue;
-      const member = balanceMap.get(share.memberId);
-      if (!member) continue;
-      member.netBalance = round(member.netBalance + share.paidAmount);
-      holder.netBalance = round(holder.netBalance - share.paidAmount);
-    }
-  }
-
-  for (const balance of balances) {
-    balance.totalDue = round(balance.rentDue + balance.externalUtilityDue + Math.max(0, -balance.netBalance));
-  }
 
   const rentResidentPaidTotal = round(balances.reduce((sum, balance) => sum + balance.rentPaid, 0));
   const rentResidentDueTotal = round(balances.reduce((sum, balance) => sum + balance.rentDue, 0));
@@ -513,7 +505,7 @@ function summarizeMember(member: Member, snapshots: MonthSnapshot[]): MemberLife
       0,
     ),
   );
-  const recordedCashPaid = round(balances.reduce((sum, balance) => sum + balance.outOfPocketPaid, 0));
+  const recordedCashPaid = round(rentPaid + utilitiesPaid + housePurchasesPaid);
   const roommateDue = round(Math.max(0, -roommateBalance));
   const roommateCredit = round(Math.max(0, roommateBalance));
 
@@ -537,7 +529,7 @@ function summarizeMember(member: Member, snapshots: MonthSnapshot[]): MemberLife
     roommateBalance,
     roommateDue,
     roommateCredit,
-    totalDue: round(rentDue + externalUtilityDue + roommateDue),
+    totalDue: round(rentDue + utilityDue + roommateDue),
   };
 }
 

@@ -48,6 +48,7 @@ export type UtilityPayment = {
 export type UtilityShareStatus = {
   memberId: string;
   memberName: string;
+  nationality: string;
   share: number;
   paidAmount: number;
   dueAmount: number;
@@ -73,6 +74,7 @@ export type Settings = {
 export type MemberBalance = {
   id: string;
   name: string;
+  nationality: string;
   rent: number;
   rentPaid: number;
   rentDue: number;

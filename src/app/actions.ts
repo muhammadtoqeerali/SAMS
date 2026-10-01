@@ -26,6 +26,11 @@ function revalidateAll() {
   revalidatePath("/settings");
 }
 
+function safeReturnTo(value: FormDataEntryValue | null, fallback: string) {
+  const path = value?.toString() || "";
+  return path.startsWith("/") && !path.startsWith("//") ? path : fallback;
+}
+
 export async function loginAction(_state: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const password = z.string().min(1).max(200).parse(formData.get("password"));
@@ -181,6 +186,7 @@ export async function setUtilitySharePaymentAction(formData: FormData) {
     month: formData.get("month"),
     mode: formData.get("mode"),
   });
+  const returnTo = safeReturnTo(formData.get("returnTo"), `/utilities?month=${values.month}`);
 
   const sql = getDb();
   if (values.mode === "unpaid") {
@@ -191,7 +197,7 @@ export async function setUtilitySharePaymentAction(formData: FormData) {
         AND month = ${values.month}
     `;
     revalidateAll();
-    return;
+    redirect(returnTo);
   }
 
   const snapshot = await getMonthSnapshot(values.month);
@@ -207,6 +213,7 @@ export async function setUtilitySharePaymentAction(formData: FormData) {
     DO UPDATE SET amount = EXCLUDED.amount, paid_at = now()
   `;
   revalidateAll();
+  redirect(returnTo);
 }
 
 export async function setRentPaymentAction(formData: FormData) {
@@ -220,6 +227,7 @@ export async function setRentPaymentAction(formData: FormData) {
     month: formData.get("month"),
     mode: formData.get("mode"),
   });
+  const returnTo = safeReturnTo(formData.get("returnTo"), `/?month=${values.month}`);
 
   const sql = getDb();
   if (values.mode === "unpaid") {
@@ -228,7 +236,7 @@ export async function setRentPaymentAction(formData: FormData) {
       WHERE member_id = ${values.memberId}::uuid AND month = ${values.month}
     `;
     revalidateAll();
-    return;
+    redirect(returnTo);
   }
 
   const snapshot = await getMonthSnapshot(values.month);
@@ -242,6 +250,7 @@ export async function setRentPaymentAction(formData: FormData) {
     DO UPDATE SET amount = EXCLUDED.amount, paid_at = now()
   `;
   revalidateAll();
+  redirect(returnTo);
 }
 
 export async function updateSettingsAction(_state: ActionState, formData: FormData): Promise<ActionState> {

@@ -5,6 +5,7 @@ import { TrendChart, ContributionChart } from "@/components/AnalyticsCharts";
 import { EmptyState } from "@/components/EmptyState";
 import { MonthPicker } from "@/components/MonthPicker";
 import { StatCard } from "@/components/StatCard";
+import { countryBadge } from "@/lib/country";
 import { euro, formatDateTime, monthLabel } from "@/lib/format";
 import { getMonthSnapshot, getTrend } from "@/lib/data";
 import { normalizeMonth } from "@/lib/month";
@@ -61,7 +62,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 <thead><tr><th>Resident</th><th>Rent</th><th>Rent status</th><th>Groceries</th><th>Utilities</th><th>Utility status</th><th>Shared balance</th><th>Still due</th><th>Total responsibility</th></tr></thead>
                 <tbody>{snapshot.balances.map((row) => (
                   <tr key={row.id}>
-                    <td><Link className="resident-link" href={`/members/${row.id}`}><strong>{row.name}</strong></Link></td>
+                    <td><Link className="resident-link resident-name-with-flag" href={`/members/${row.id}`}><span className="mini-flag" title={countryBadge(row.nationality).label}>{countryBadge(row.nationality).flag}</span><strong>{row.name}</strong></Link></td>
                     <td>{euro(row.rent)}</td>
                     <td>
                       <div className="payment-status-stack">
@@ -70,6 +71,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                           <input type="hidden" name="memberId" value={row.id} />
                           <input type="hidden" name="month" value={month} />
                           <input type="hidden" name="mode" value={row.rentDue > 0.009 ? "paid" : "unpaid"} />
+                          <input type="hidden" name="returnTo" value={`/?month=${month}`} />
                           <button className={`mini-payment-button ${row.rentDue > 0.009 ? "confirm" : "undo"}`} type="submit">
                             {row.rentDue > 0.009 ? <><Check size={12} /> Mark paid</> : <><RotateCcw size={12} /> Undo</>}
                           </button>
@@ -90,14 +92,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </article>
 
         <article className="card settlement-card">
-          <div className="card-head"><div><span className="eyebrow">Smart settlement</span><h2>Who pays whom</h2></div><CreditCard size={20} /></div>
+          <div className="card-head"><div><span className="eyebrow">Groceries & household settlement</span><h2>Who pays whom</h2></div><CreditCard size={20} /></div>
           {snapshot.settlements.length ? (
             <div className="settlement-list">{snapshot.settlements.map((item, index) => (
               <div className="settlement-row" key={`${item.fromId}-${item.toId}-${index}`}>
                 <div><strong>{item.from}</strong><span>pays</span><strong>{item.to}</strong></div><strong className="settlement-amount">{euro(item.amount)}</strong>
               </div>
             ))}</div>
-          ) : <EmptyState title="No roommate transfers needed" text="Already-paid shared costs are balanced for this month." />}
+          ) : <EmptyState title="No grocery/house transfers needed" text="Groceries and household purchases are balanced for this month." />}
           <div className={`utility-due ${snapshot.utilityResidentDueTotal <= 0.009 ? "clear" : ""}`}>
             {snapshot.utilityResidentDueTotal <= 0.009 ? <CheckCircle2 size={17} /> : <Zap size={17} />}
             <div>
